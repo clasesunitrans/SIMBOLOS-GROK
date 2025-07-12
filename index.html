@@ -1,0 +1,502 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Symbols Practice App</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <!-- MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                ignoreHtmlClass: 'tex2jax_ignore'
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f0e4ff, #d4eaff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .container {
+            background: #ffffff;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+            max-width: 650px;
+            width: 95%;
+            text-align: center;
+        }
+        h1 {
+            color: #5b4b8e;
+            margin-bottom: 2rem;
+            font-size: 2.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        h1 i {
+            color: #ff9cc7;
+        }
+        .exercise {
+            background: linear-gradient(135deg, #e2eafc, #f0fff5);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .exercise p {
+            font-size: 1.3rem;
+            margin-bottom: 1.2rem;
+            color: #4b5e8e;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        .option {
+            background: #f0f4ff;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 2px solid #d4dcff;
+            cursor: pointer;
+            transition: transform 0.3s ease, background 0.3s ease;
+            font-size: 1.1rem;
+        }
+        .option:hover {
+            background: #d4dcff;
+            transform: scale(1.03);
+        }
+        .option.selected {
+            background: #a3bffa;
+            border-color: #5b4b8e;
+            transform: scale(1.05);
+        }
+        .feedback {
+            margin-top: 1.5rem;
+            padding: 1.2rem;
+            border-radius: 12px;
+            display: none;
+            animation: bounceIn 0.4s ease;
+        }
+        .correct {
+            background: #c3e6cb;
+            color: #155724;
+        }
+        .correct i {
+            color: #28a745;
+            margin-right: 0.5rem;
+        }
+        .incorrect {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .incorrect i {
+            color: #dc3545;
+            margin-right: 0.5rem;
+        }
+        .score {
+            margin-top: 2rem;
+            font-size: 1.2rem;
+            color: #5b4b8e;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+        .score i {
+            font-size: 1.3rem;
+        }
+        .score .correct-score i {
+            color: #28a745;
+        }
+        .score .incorrect-score i {
+            color: #dc3545;
+        }
+        button {
+            background: linear-gradient(135deg, #ff9cc7, #5b4b8e);
+            color: white;
+            padding: 0.8rem 1.8rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin: 1rem 0.5rem 0;
+            transition: transform 0.3s ease, background 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #5b4b8e, #ff9cc7);
+            transform: scale(1.05);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .exercise p {
+                font-size: 1.1rem;
+            }
+            .option {
+                font-size: 1rem;
+            }
+            button {
+                font-size: 1rem;
+                padding: 0.7rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-star"></i> Práctica de Símbolos Matemáticos</h1>
+        <div id="exercise"></div>
+        <div id="feedback" class="feedback"></div>
+        <button id="nextBtn" style="display: none;"><i class="fas fa-arrow-right"></i> Siguiente</button>
+        <button id="newRoundBtn" style="display: none;"><i class="fas fa-redo"></i> Nueva Ronda</button>
+        <div class="score">
+            <span class="correct-score"><i class="fas fa-check-circle"></i> Aciertos: <span id="correct">0</span></span>
+            <span class="incorrect-score"><i class="fas fa-exclamation-circle"></i> Errores: <span id="incorrect">0</span></span>
+        </div>
+    </div>
+
+    <script>
+        const symbols = [
+            {
+                symbol: "∈",
+                description: "Representa que un elemento pertenece a un conjunto.",
+                usage: "Se usa para indicar que un elemento es parte de un conjunto, por ejemplo, $x \\in A$ significa que $x$ es un elemento del conjunto $A$."
+            },
+            {
+                symbol: "∉",
+                description: "Representa que un elemento no pertenece a un conjunto.",
+                usage: "Se usa para indicar que un elemento no está en un conjunto, por ejemplo, $x \\notin A$ significa que $x$ no es un elemento del conjunto $A$."
+            },
+            {
+                symbol: "⊆",
+                description: "Representa que un conjunto es subconjunto de otro.",
+                usage: "Se usa para indicar que todos los elementos de un conjunto están en otro, por ejemplo, $A \\subseteq B$ significa que $A$ es un subconjunto de $B$."
+            },
+            {
+                symbol: "⊂",
+                description: "Representa que un conjunto es subconjunto propio de otro.",
+                usage: "Se usa para indicar que $A$ es un subconjunto de $B$ pero no son iguales, por ejemplo, $A \\subset B$."
+            },
+            {
+                symbol: "∪",
+                description: "Representa la unión de dos conjuntos.",
+                usage: "Se usa para combinar todos los elementos de dos conjuntos, por ejemplo, $A \\cup B$ contiene todos los elementos que están en $A$, en $B$, o en ambos."
+            },
+            {
+                symbol: "∩",
+                description: "Representa la intersección de dos conjuntos.",
+                usage: "Se usa para indicar los elementos comunes a dos conjuntos, por ejemplo, $A \\cap B$ contiene los elementos que están tanto en $A$ como en $B$."
+            },
+            {
+                symbol: "\\setminus",
+                description: "Representa la diferencia entre dos conjuntos.",
+                usage: "Se usa para indicar los elementos que están en un conjunto pero no en otro, por ejemplo, $A \\setminus B$ contiene los elementos de $A$ que no están en $B$."
+            },
+            {
+                symbol: "∅",
+                description: "Representa un conjunto que no contiene elementos.",
+                usage: "Se usa para denotar el conjunto vacío, por ejemplo, $A = \\emptyset$ significa que $A$ no tiene elementos."
+            },
+            {
+                symbol: "ℤ",
+                description: "Representa el conjunto de números enteros.",
+                usage: "Se usa para denotar todos los números enteros, por ejemplo, $\\mathbb{Z} = \\{\\ldots, -2, -1, 0, 1, 2, \\ldots\\}$."
+            },
+            {
+                symbol: "ℕ",
+                description: "Representa el conjunto de números naturales.",
+                usage: "Se usa para denotar los números naturales, por ejemplo, $\\mathbb{N} = \\{1, 2, 3, \\ldots\\}$ (a veces incluye el 0 dependiendo del contexto)."
+            },
+            {
+                symbol: "ℝ",
+                description: "Representa el conjunto de números reales.",
+                usage: "Se usa para denotar todos los números reales, por ejemplo, $\\mathbb{R}$ incluye enteros, racionales e irracionales."
+            },
+            {
+                symbol: "ℚ",
+                description: "Representa el conjunto de números racionales.",
+                usage: "Se usa para denotar los números que pueden expresarse como fracciones, por ejemplo, $\\mathbb{Q} = \\left\\{ \\frac{a}{b} \\mid a, b \\in \\mathbb{Z}, b \\neq 0 \\right\\}$."
+            },
+            {
+                symbol: "≤",
+                description: "Representa menor o igual que.",
+                usage: "Se usa para comparar números, por ejemplo, $x \\leq y$ significa que $x$ es menor o igual que $y$."
+            },
+            {
+                symbol: "≥",
+                description: "Representa mayor o igual que.",
+                usage: "Se usa para comparar números, por ejemplo, $x \\geq y$ significa que $x$ es mayor o igual que $y$."
+            },
+            {
+                symbol: "≠",
+                description: "Representa que dos valores no son iguales.",
+                usage: "Se usa para indicar desigualdad, por ejemplo, $x \\neq y$ significa que $x$ no es igual a $y$."
+            },
+            {
+                symbol: "≈",
+                description: "Representa que dos valores son aproximadamente iguales.",
+                usage: "Se usa para indicar aproximación, por ejemplo, $x \\approx y$ significa que $x$ es aproximadamente igual a $y$."
+            },
+            {
+                symbol: "∞",
+                description: "Representa el infinito.",
+                usage: "Se usa para denotar un valor o cantidad ilimitada, por ejemplo, $\\lim_{x \\to \\infty} f(x)$ indica el límite cuando $x$ tiende a infinito."
+            },
+            {
+                symbol: "∑",
+                description: "Representa una suma de términos.",
+                usage: "Se usa para denotar la suma de una secuencia, por ejemplo, $\\sum_{i=1}^n i$ representa la suma de 1 a $n$."
+            },
+            {
+                symbol: "∫",
+                description: "Representa una integral.",
+                usage: "Se usa en cálculo para denotar integración, por ejemplo, $\\int_a^b f(x) \\, dx$ representa la integral de $f(x)$ de $a$ a $b$."
+            },
+            {
+                symbol: "∂",
+                description: "Representa una derivada parcial.",
+                usage: "Se usa en cálculo para derivadas parciales, por ejemplo, $\\partial f / \\partial x$ indica la derivada parcial de $f$ respecto a $x$."
+            },
+            {
+                symbol: "∇",
+                description: "Representa el operador nabla (gradiente, divergencia o rotacional).",
+                usage: "Se usa en cálculo vectorial, por ejemplo, $\\nabla f$ representa el gradiente de $f$."
+            },
+            {
+                symbol: "±",
+                description: "Representa más o menos.",
+                usage: "Se usa para indicar dos posibles valores, por ejemplo, $x = \\pm 2$ significa $x = 2$ o $x = -2$."
+            },
+            {
+                symbol: "×",
+                description: "Representa la multiplicación.",
+                usage: "Se usa para indicar el producto de dos números, por ejemplo, $a \\times b$ significa $a$ multiplicado por $b$."
+            },
+            {
+                symbol: "÷",
+                description: "Representa la división.",
+                usage: "Se usa para indicar la división de dos números, por ejemplo, $a \\div b$ significa $a$ dividido por $b$."
+            },
+            {
+                symbol: "→",
+                description: "Representa una función o límite que tiende a un valor.",
+                usage: "Se usa para indicar dirección o límite, por ejemplo, $x \\to a$ significa que $x$ tiende a $a$."
+            }
+        ];
+
+        const exerciseTemplates = [
+            {
+                Pregunta: "¿Qué significa el símbolo {symbol}?",
+                options: [
+                    { text: "{description}", correct: true },
+                    { text: "Un conjunto es subconjunto de otro", correct: false },
+                    { text: "La unión de dos conjuntos", correct: false },
+                    { text: "Un conjunto vacío", correct: false }
+                ],
+                correctAnswer: "{description}"
+            },
+            {
+                Pregunta: "¿Es cierto que {symbol} indica {incorrect_description}?",
+                options: [
+                    { text: "Verdadero", correct: false },
+                    { text: "Falso", correct: true }
+                ],
+                correctAnswer: "Falso"
+            }
+        ];
+
+        let currentExercise = 0;
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let currentExercises = [];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function generateExercises() {
+            const shuffledSymbols = shuffleArray([...symbols]).slice(0, 10);
+            currentExercises = shuffledSymbols.map((symbol, index) => {
+                const template = exerciseTemplates[index % 2];
+                const incorrectDesc = symbols.filter(s => s !== symbol)[Math.floor(Math.random() * (symbols.length - 1))].description;
+                return {
+                    question: template.question
+                        .replace("{symbol}", `$${symbol.symbol}$`)
+                        .replace("{incorrect_description}", incorrectDesc),
+                    options: template.options.map(opt => ({
+                        text: opt.text.replace("{description}", symbol.description),
+                        correct: opt.correct
+                    })),
+                    correctAnswer: template.correctAnswer.replace("{description}", symbol.description),
+                    description: symbol.description,
+                    usage: symbol.usage
+                };
+            });
+        }
+
+        function renderExercise() {
+            const exerciseDiv = document.getElementById('exercise');
+            const feedbackDiv = document.getElementById('feedback');
+            const nextBtn = document.getElementById('nextBtn');
+            const newRoundBtn = document.getElementById('newRoundBtn');
+            const exercise = currentExercises[currentExercise];
+
+            exerciseDiv.innerHTML = `
+                <div class="exercise">
+                    <p>${exercise.question}</p>
+                    <div class="options">
+                        ${exercise.options.map((option, index) => `
+                            <div class="option" onclick="selectOption(${index})">${option.text}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            feedbackDiv.style.display = 'none';
+            nextBtn.style.display = 'none';
+            newRoundBtn.style.display = 'none';
+
+            if (window.MathJax) {
+                window.MathJax.typesetClear();
+                window.MathJax.typesetPromise([exerciseDiv]).catch(err => console.error('MathJax error:', err));
+            }
+        }
+
+        function selectOption(index) {
+            const exercise = currentExercises[currentExercise];
+            const feedbackDiv = document.getElementById('feedback');
+            const nextBtn = document.getElementById('nextBtn');
+            const newRoundBtn = document.getElementById('newRoundBtn');
+            const options = document.querySelectorAll('.option');
+
+            options.forEach(opt => opt.classList.remove('selected'));
+            options[index].classList.add('selected');
+
+            if (exercise.options[index].correct) {
+                correctCount++;
+                feedbackDiv.innerHTML = `<i class="fas fa-check-circle"></i> ¡Correcto! ${exercise.description}<br><strong>Uso:</strong> ${exercise.usage}`;
+                feedbackDiv.className = 'feedback correct';
+            } else {
+                incorrectCount++;
+                feedbackDiv.innerHTML = `<i class="fas fa-times-circle"></i> Incorrecto. ${exercise.description}<br><strong>Uso:</strong> ${exercise.usage}`;
+                feedbackDiv.className = 'feedback incorrect';
+            }
+
+            feedbackDiv.style.display = 'block';
+            nextBtn.style.display = currentExercise < currentExercises.length - 1 ? 'block' : 'none';
+            newRoundBtn.style.display = currentExercise === currentExercises.length - 1 ? 'block' : 'none';
+
+            document.getElementById('correct').textContent = correctCount;
+            document.getElementById('incorrect').textContent = incorrectCount;
+
+            if (window.MathJax) {
+                window.MathJax.typesetClear();
+                window.MathJax.typesetPromise([feedbackDiv]).catch(err => console.error('MathJax error:', err));
+            }
+        }
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            currentExercise++;
+            if (currentExercise < currentExercises.length) {
+                renderExercise();
+            }
+        });
+
+        document.getElementById('newRoundBtn').addEventListener('click', () => {
+            currentExercise = 0;
+            correctCount = 0;
+            incorrectCount = 0;
+            document.getElementById('correct').textContent = correctCount;
+            document.getElementById('incorrect').textContent = incorrectCount;
+            generateExercises();
+            renderExercise();
+        });
+
+        // Load MathJax and start first round
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        script.async = true;
+        script.onload = () => {
+            generateExercises();
+            renderExercise();
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>
